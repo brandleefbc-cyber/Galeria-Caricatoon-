@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galeria do Grotesco | Gerador de Caricaturas</title>
+  <meta name="description" content="Envie uma foto e transforme em caricatura grotesca estilo esboço de caderno." />
+  <style>
+    :root {
+      --bg: #130c08;
+      --bg-2: #21100a;
+      --paper: #f1dfb7;
+      --paper-2: #fff0c8;
+      --red: #ee2405;
+      --red-dark: #8f1604;
+      --cream: #fff6df;
+      --ink: #342115;
+      --muted: #b9a88b;
+      --shadow: rgba(0, 0, 0, .55);
+      --line: rgba(238, 36, 5, .75);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--cream);
+      background:
+        radial-gradient(circle at top, rgba(124, 37, 9, .32), transparent 35%),
+        linear-gradient(135deg, rgba(255,255,255,.03) 0 25%, transparent 25% 50%, rgba(255,255,255,.02) 50% 75%, transparent 75%),
+        linear-gradient(180deg, #1a100c 0%, #0f0907 100%);
+      background-size: auto, 22px 22px, auto;
+      overflow-x: hidden;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .12;
+      background-image:
+        repeating-radial-gradient(circle at 17% 32%, rgba(255,255,255,.16) 0 1px, transparent 1px 4px),
+        repeating-radial-gradient(circle at 67% 72%, rgba(0,0,0,.45) 0 1px, transparent 1px 5px);
+      mix-blend-mode: overlay;
+      z-index: 1;
+    }
+
+    .page {
+      position: relative;
+      z-index: 2;
+      width: min(720px, 100%);
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    header {
+      text-align: center;
+      padding: 18px 0 38px;
+      border-bottom: 4px solid var(--line);
+      margin: 0 -18px 34px;
+      background: radial-gradient(circle at center, rgba(238,36,5,.15), transparent 55%);
+    }
+
+    .brand {
+      margin: 0;
+      font-weight: 900;
+      line-height: .86;
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      font-size: clamp(3rem, 12vw, 6rem);
+      text-shadow:
+        3px 3px 0 #2d1307,
+        7px 7px 0 rgba(238,36,5,.72),
+        0 10px 22px rgba(0,0,0,.55);
+    }
+
+    .brand span {
+      display: block;
+      color: var(--red);
+      text-shadow:
+        3px 3px 0 #2d1307,
+        7px 7px 0 rgba(255,244,218,.20),
+        0 10px 22px rgba(0,0,0,.55);
+    }
+
+    .subtitle {
+      margin: 26px auto 0;
+      max-width: 610px;
+      color: #d4bfa0;
+      font-style: italic;
+      letter-spacing: 2px;
+      line-height: 1.45;
+      font-size: clamp(1.05rem, 4vw, 1.55rem);
+    }
+
+    .board {
+      position: relative;
+      margin: 0 auto 26px;
+      padding: 16px;
+      background: #120906;
+      box-shadow: 14px 14px 0 rgba(158,24,0,.72), 0 18px 42px var(--shadow);
+      border: 1px solid rgba(255, 255, 255, .05);
+      transform: rotate(-.35deg);
+    }
+
+    .label {
+      position: absolute;
+      top: -14px;
+      left: 50px;
+      padding: 10px 22px;
+      background: var(--red);
+      color: var(--cream);
+      text-transform: uppercase;
+      letter-spacing: 8px;
+      font: 800 .9rem/1 Arial, sans-serif;
+      box-shadow: 5px 5px 0 rgba(0,0,0,.28);
+      z-index: 5;
+    }
+
+    .paper {
+      position: relative;
+      background: linear-gradient(145deg, var(--paper-2), var(--paper));
+      color: var(--ink);
+      padding: 34px 24px 28px;
+      min-height: 330px;
+      border: 1px solid rgba(52,33,21,.35);
+      overflow: hidden;
+    }
+
+    .paper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,.55), transparent 22%),
+        radial-gradient(circle at 84% 88%, rgba(115,69,18,.12), transparent 32%);
+      pointer-events: none;
+    }
+
+    .upload-zone {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 225px;
+      border: 3px dashed rgba(52, 33, 21, .45);
+      background: rgba(202, 174, 104, .18);
+      cursor: pointer;
+      transition: .2s ease;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag {
+      background: rgba(238, 36, 5, .10);
+      border-color: rgba(238,36,5,.85);
+      transform: translateY(-2px);
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .upload-copy {
+      font-size: 1.32rem;
+      color: rgba(52,33,21,.78);
+      line-height: 1.35;
+    }
+
+    .upload-copy strong {
+      display: block;
+      color: var(--ink);
+      font-size: 1.55rem;
+      margin-bottom: 10px;
+    }
+
+    .preview {
+      width: 100%;
+      display: none;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .preview img {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border: 8px solid #fff2ca;
+      outline: 1px solid rgba(52,33,21,.35);
+      box-shadow: 6px 7px 0 rgba(52,33,21,.18);
+      transform: rotate(-1deg);
+      background: #fff2ca;
+    }
+
+    .preview-info {
+      flex: 1;
+      text-align: left;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .file-name {
+      font-weight: 800;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+
+    .hint {
+      position: relative;
+      margin: 22px 8px 0;
+      text-align: center;
+      color: rgba(52,33,21,.72);
+      font-style: italic;
+      font-size: 1.1rem;
+      line-height: 1.35;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+      margin: 26px 0 0;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      font-family: Arial, sans-serif;
+      color: #ead6b4;
+    }
+
+    .field label {
+      text-transform: uppercase;
+      font-size: .72rem;
+      letter-spacing: 2.5px;
+      color: #c2a586;
+      font-weight: 800;
+    }
+
+    select,
+    textarea {
+      width: 100%;
+      color: var(--cream);
+      background: #100806;
+      border: 1px solid rgba(238,36,5,.48);
+      border-radius: 0;
+      padding: 14px;
+      font: 600 1rem Arial, sans-serif;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 6px 6px 0 rgba(238,36,5,.18);
+    }
+
+    textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    .button {
+      width: 100%;
+      border: 0;
+      background: var(--red);
+      color: var(--cream);
+      padding: 24px 18px;
+      margin: 22px 0 0;
+      text-transform: uppercase;
+      letter-spacing: 7px;
+      font: 900 clamp(1rem, 5vw, 1.65rem) Georgia, "Times New Roman", serif;
+      box-shadow: 9px 9px 0 var(--red-dark), 0 16px 30px rgba(0,0,0,.38);
+      cursor: pointer;
+      transition: transform .18s ease, filter .18s ease;
+    }
+
+    .button:hover:not(:disabled) {
+      transform: translate(-2px, -2px);
+      filter: saturate(1.1) brightness(1.05);
+    }
+
+    .button:disabled {
+      opacity: .58;
+      cursor: not-allowed;
+    }
+
+    .status {
+      display: none;
+      margin: 18px 0 0;
+      padding: 14px 16px;
+      font-family: Arial, sans-serif;
+      border-left: 5px solid var(--red);
+      background: rgba(0,0,0,.35);
+      color: #ead6b4;
+      line-height: 1.45;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .loader {
+      width: 100%;
+      height: 10px;
+      background: rgba(255,255,255,.12);
+      margin-top: 12px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .loader.show {
+      display: block;
+    }
+
+    .loader span {
+      display: block;
+      width: 45%;
+      height: 100%;
+      background: var(--red);
+      animation: loading 1.1s infinite ease-in-out;
+    }
+
+    @keyframes loading {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(230%); }
+    }
+
+    .result {
+      display: none;
+      margin-top: 34px;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result-title {
+      margin: 0 0 16px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      color: #f2dec0;
+      text-shadow: 3px 3px 0 rgba(238,36,5,.55);
+    }
+
+    .result-frame {
+      padding: 14px;
+      background: #0e0705;
+      box-shadow: 12px 12px 0 rgba(143,22,4,.8);
+    }
+
+    .result-frame img {
+      display: block;
+      width: 100%;
+      background: #fff0c8;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .secondary {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      min-height: 54px;
+      padding: 12px 16px;
+      border: 1px solid rgba(238,36,5,.65);
+      background: rgba(238,36,5,.12);
+      color: var(--cream);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 2.6px;
+      font: 800 .84rem Arial, sans-serif;
+      cursor: pointer;
+    }
+
+    footer {
+      margin-top: 38px;
+      color: rgba(255,246,223,.55);
+      font: 500 .84rem/1.55 Arial, sans-serif;
+      text-align: center;
+    }
+
+    @media (min-width: 620px) {
+      .controls {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .actions {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .page {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      header {
+        margin-left: -12px;
+        margin-right: -12px;
+      }
+
+      .label {
+        left: 26px;
+        letter-spacing: 5px;
+      }
+
+      .paper {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .preview {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .preview img {
+        width: 100%;
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="page">
+    <header>
+      <h1 class="brand">Galeria do <span>Grotesco</span></h1>
+      <p class="subtitle">Caricaturas de alta qualidade no estilo esboço de caderno</p>
+    </header>
+
+    <section class="board" aria-label="Envio de foto original">
+      <div class="label">Foto Original</div>
+      <div class="paper">
+        <label class="upload-zone" id="dropZone">
+          <input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" />
+          <div class="upload-copy" id="uploadCopy">
+            <strong>📷 Toque para enviar a foto</strong>
+            JPG, PNG ou WEBP — até 8 MB
+          </div>
+
+          <div class="preview" id="previewBox">
+            <img id="previewImage" alt="Prévia da foto original" />
+            <div class="preview-info">
+              <div class="file-name" id="fileName">foto enviada</div>
+              <div>Foto carregada e pronta para caricaturização.</div>
+              <small>Para trocar, toque novamente nessa área.</small>
+            </div>
+          </div>
+        </label>
+
+        <p class="hint">Transforme uma foto comum em uma caricatura grotesca, expressiva, elegante e humorística.</p>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controles da caricatura">
+      <div class="field">
+        <label for="styleSelect">Estilo</label>
+        <select id="styleSelect">
+          <option value="grotesco">Grotesco elegante de caderno</option>
+          <option value="moda">Quadrinhos de moda exagerada</option>
+          <option value="rua">Artista de rua improvisado</option>
+          <option value="premium">Editorial premium dramático</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="qualitySelect">Qualidade</label>
+        <select id="qualitySelect">
+          <option value="medium">Média — mais rápida</option>
+          <option value="high">Alta — melhor resultado</option>
+          <option value="low">Baixa — teste rápido</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label for="notesInput">Orientação opcional</label>
+        <textarea id="notesInput" placeholder="Ex.: manter a posição das pessoas, preservar uniformes, exagerar nariz e queixo, manter fundo parecido..."></textarea>
+      </div>
+    </section>
+
+    <button class="button" id="generateBtn">✒️ Gerar Caricatura</button>
+
+    <div class="status" id="statusBox"></div>
+    <div class="loader" id="loader"><span></span></div>
+
+    <section class="result" id="resultBox" aria-live="polite">
+      <h2 class="result-title">Caricatura Gerada</h2>
+      <div class="result-frame">
+        <img id="resultImage" alt="Caricatura gerada" />
+      </div>
+      <div class="actions">
+        <a class="secondary" id="downloadBtn" download="caricatura-galeria-do-grotesco.png">Baixar imagem</a>
+        <button class="secondary" id="shareBtn" type="button">Compartilhar</button>
+      </div>
+    </section>
+
+    <footer>
+      <p>As imagens enviadas são usadas apenas para gerar a caricatura durante a solicitação. Não coloque sua chave da API no código do navegador.</p>
+    </footer>
+  </main>
+
+  <script>
+    const photoInput = document.getElementById("photoInput");
+    const dropZone = document.getElementById("dropZone");
+    const uploadCopy = document.getElementById("uploadCopy");
+    const previewBox = document.getElementById("previewBox");
+    const previewImage = document.getElementById("previewImage");
+    const fileName = document.getElementById("fileName");
+    const generateBtn = document.getElementById("generateBtn");
+    const statusBox = document.getElementById("statusBox");
+    const loader = document.getElementById("loader");
+    const resultBox = document.getElementById("resultBox");
+    const resultImage = document.getElementById("resultImage");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const styleSelect = document.getElementById("styleSelect");
+    const qualitySelect = document.getElementById("qualitySelect");
+    const notesInput = document.getElementById("notesInput");
+
+    let selectedFile = null;
+    let imageData = null;
+    let resultDataUrl = null;
+
+    const MAX_SIZE = 8 * 1024 * 1024;
+
+    function showStatus(message, loading = false) {
+      statusBox.textContent = message;
+      statusBox.classList.add("show");
+      loader.classList.toggle("show", loading);
+    }
+
+    function hideStatus() {
+      statusBox.classList.remove("show");
+      loader.classList.remove("show");
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function loadFile(file) {
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        showStatus("Envie apenas arquivos de imagem.");
+        return;
+      }
+
+      if (file.size > MAX_SIZE) {
+        showStatus("A imagem é muito grande. Envie uma foto de até 8 MB.");
+        return;
+      }
+
+      selectedFile = file;
+      imageData = await fileToDataUrl(file);
+      previewImage.src = imageData;
+      fileName.textContent = file.name;
+      uploadCopy.style.display = "none";
+      previewBox.style.display = "flex";
+      resultBox.classList.remove("show");
+      hideStatus();
+    }
+
+    photoInput.addEventListener("change", (event) => {
+      loadFile(event.target.files[0]);
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropZone.classList.add("drag");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("drag");
+      });
+    });
+
+    dropZone.addEventListener("drop", (event) => {
+      const file = event.dataTransfer.files[0];
+      loadFile(file);
+    });
+
+    function buildStyleInstruction(style) {
+      const styles = {
+        grotesco: "caricatura grotesca elegante, humorística, em esboço de caderno, anatomia exagerada, proporções alongadas, expressões dramáticas, acabamento de artista de rua sofisticado",
+        moda: "quadrinhos de moda grotesco e humorístico, poses desajeitadamente elegantes, estruturas anatômicas alongadas, traço editorial de caderno de moda",
+        rua: "caricatura improvisada por artista de rua, traço solto, expressões marcantes, exagero cômico sem perder a semelhança",
+        premium: "caricatura editorial premium, iluminação dramática, alto impacto visual, traço grotesco refinado, preservando fisionomia e composição"
+      };
+
+      return styles[style] || styles.grotesco;
+    }
+
+    generateBtn.addEventListener("click", async () => {
+      if (!selectedFile || !imageData) {
+        showStatus("Primeiro envie uma foto para gerar a caricatura.");
+        return;
+      }
+
+      generateBtn.disabled = true;
+      resultBox.classList.remove("show");
+      showStatus("Gerando caricatura. Isso pode levar até alguns minutos...", true);
+
+      try {
+        const response = await fetch("/.netlify/functions/generate-caricature", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageData,
+            mimeType: selectedFile.type,
+            fileName: selectedFile.name,
+            styleInstruction: buildStyleInstruction(styleSelect.value),
+            quality: qualitySelect.value,
+            userNotes: notesInput.value.trim()
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Não foi possível gerar a caricatura.");
+        }
+
+        resultDataUrl = `data:image/${data.outputFormat || "png"};base64,${data.imageBase64}`;
+        resultImage.src = resultDataUrl;
+        downloadBtn.href = resultDataUrl;
+        resultBox.classList.add("show");
+        showStatus("Caricatura gerada com sucesso!");
+      } catch (error) {
+        showStatus(error.message || "Erro ao gerar caricatura.");
+      } finally {
+        generateBtn.disabled = false;
+        loader.classList.remove("show");
+      }
+    });
+
+    shareBtn.addEventListener("click", async () => {
+      if (!resultDataUrl) return;
+
+      try {
+        const blob = await (await fetch(resultDataUrl)).blob();
+        const file = new File([blob], "caricatura-galeria-do-grotesco.png", { type: blob.type });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: "Minha caricatura",
+            text: "Caricatura criada na Galeria do Grotesco",
+            files: [file]
+          });
+          return;
+        }
+      } catch (error) {
+        // Se o compartilhamento nativo falhar, copiamos a imagem como data URL.
+      }
+
+      try {
+        await navigator.clipboard.writeText(resultDataUrl);
+        showStatus("Link da imagem copiado. Em alguns apps, talvez seja melhor baixar a imagem e enviar manualmente.");
+      } catch {
+        showStatus("Use o botão Baixar imagem para salvar e compartilhar.");
+      }
+    });
+  </script>
+</body>
+</html>
